@@ -41,3 +41,7 @@ bodek("Failing test", {
 
 	ASSERT_BUFF_EQ(a, b, 5)
 });
+
+int main(int argc, char* argv[]) {
+	BODEK_RUN();
+}
