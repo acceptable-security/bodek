@@ -2,6 +2,13 @@
 #include <stdio.h>
 
 /**
+ * Util macros
+ */
+#define REDIR(X) X
+#define CAT(a, b) CAT1(a, b)
+#define CAT1(a, b) REDIR(a ## b)
+
+/**
  * Assertions
  */
 #define BODEK_FAIL 0
@@ -28,19 +35,24 @@
  * Helper definitions
  */
 
+// Used to differentiate pre/post and tests
 typedef enum {
     BODEK_BEFORE_TEST,
     BODEK_TEST,
     BODEK_AFTER_TEST
 } bodek_run_t;
 
+// Per-test data block accessible by the `ctx` pointer.
+// NOTE: Cleared inbetween tests
 typedef struct {
     unsigned int test_n;
     void* user_data;
 } bodek_ctx_t;
 
+// Function prototype for generated things
 typedef int (*bodek_helper_cb)(bodek_ctx_t*);
 
+// Structure placed in custom segment which contains important information
 typedef struct {
     bodek_helper_cb cb;
     const char* msg;
@@ -49,13 +61,17 @@ typedef struct {
     char _align[5]; /* I have literally no idea why dont ask me */
 } bodek_helper_t;
 
-#define PP_CAT(a, b) PP_CAT_I(a, b)
-#define PP_CAT_I(a, b) PP_CAT_II(~, a ## b)
-#define PP_CAT_II(p, res) res
 
-#define BODEK_NAME PP_CAT(PP_CAT(PP_CAT(base, __COUNTER__), _), __LINE__)
+#ifndef BODEK_MODULE
+// Use counter and line to try not to intersect with other files (try not to rely on this)
+#define BODEK_NAME CAT(CAT(CAT(bodek_noname_, __COUNTER__), _), __LINE__)
+#else
+// Use counter within module - this is guaranteed to not be shared in multiple files
+#define BODEK_NAME CAT(CAT(CAT(bodek_, BODEK_MODULE), _), __COUNTER__)
+#endif
 
 #ifdef __APPLE__
+// Force creation of __DATA,bodek_helpers
 extern bodek_helper_t __start_bodek_helpers __asm("section$start$__DATA$bodek_helpers");
 extern bodek_helper_t __stop_bodek_helpers  __asm("section$end$__DATA$bodek_helpers");
 
@@ -64,7 +80,7 @@ extern bodek_helper_t __stop_bodek_helpers  __asm("section$end$__DATA$bodek_help
         BLOCK                                                \
         return BODEK_SUCC;                                   \
     }                                                        \
-    static bodek_helper_t PP_CAT(ptr_, FN)                   \
+    static bodek_helper_t CAT(ptr_, FN)                   \
     __attribute((used, section("__DATA,bodek_helpers"))) = { \
         .cb = FN,                                            \
         .msg = MSG,                                          \
@@ -88,16 +104,15 @@ extern bodek_helper_t __stop_bodek_helpers;
     }
 #endif
 
-#define REDIR(X) X
 
 #define bodek(MSG, BLOCK) \
     _bodek(REDIR(BODEK_NAME), BODEK_TEST, MSG, BLOCK)
 
-#define bodek_before_test(MSG, BLOCK) \
-    _bodek(REDIR(BODEK_NAME), BODEK_BEFORE_TEST, MSG, BLOCK)
+#define bodek_before_test(BLOCK) \
+    _bodek(REDIR(BODEK_NAME), BODEK_BEFORE_TEST, "", BLOCK)
 
-#define bodek_after_test(MSG, BLOCK) \
-    _bodek(REDIR(BODEK_NAME), BODEK_AFTER_TEST, MSG, BLOCK)
+#define bodek_after_test(BLOCK) \
+    _bodek(REDIR(BODEK_NAME), BODEK_AFTER_TEST, "", BLOCK)
 
 #define bodek_each_helper(ELEM)                         \
     for (bodek_helper_t *ELEM = &__start_bodek_helpers; \

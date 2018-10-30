@@ -2,6 +2,7 @@
 #include "assert.h"
 #include <stdlib.h>
 
+
 bodek("Make sure we can evaluate a test", {
 	// Do nothing
 });
@@ -22,17 +23,17 @@ bodek("Make sure ASSERT_NOT_EQ evaluates 1 != 0 correctly", {
 
 });
 
-bodek("Successful test", {
+bodek("Make sure that ASSERT_BUF_EQ can test buffer equality correctly.", {
 	int a[5];
 	int b[5];
 
 	memset(a, 0, sizeof(int) * 5);
 	memset(b, 0, sizeof(int) * 5);
 
-	ASSERT_BUFF_EQ(a, b, 5)
+	ASSERT_BUFF_EQ(a, b, sizeof(int) * 5)
 });
  
-bodek("Failing test", {
+bodek("Make sure that ASSERT_BUF_EQ will fail on inequal buffers.", {
 	int a[5];
 	int b[5];
 
